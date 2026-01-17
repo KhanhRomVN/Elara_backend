@@ -288,3 +288,124 @@ export const sendMessageController = async (
     }
   }
 };
+
+const normalizeChatHistory = (provider: string, data: any) => {
+  if (!data) return { messages: [] };
+
+  // DeepSeek Normalization
+  if (provider.toLowerCase() === 'deepseek') {
+    if (
+      data.code === 0 &&
+      data.data &&
+      data.data.biz_data &&
+      data.data.biz_data.chat_messages
+    ) {
+      const messages = data.data.biz_data.chat_messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      const meta = data.data.biz_data.chat_session || {};
+
+      return {
+        conversation_id: meta.id,
+        conversation_title: meta.title,
+        messages,
+      };
+    }
+    // Fallback
+    return { messages: data };
+  }
+
+  // Default: return raw
+  return { messages: data };
+};
+
+// GET /v1/chat/history/:accountId/:conversationId
+export const getChatHistoryController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { accountId, conversationId } = req.params;
+
+    if (!accountId || !conversationId) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required parameters: accountId, conversationId',
+        error: { code: 'INVALID_INPUT' },
+        meta: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    // Get account from database
+    const db = getDb();
+    db.get(
+      'SELECT * FROM accounts WHERE id = ?',
+      [accountId],
+      async (err: any, account: any) => {
+        if (err) {
+          logger.error('Database error fetching account', err);
+          res.status(500).json({
+            success: false,
+            message: 'Failed to fetch account',
+            error: { code: 'DATABASE_ERROR' },
+            meta: { timestamp: new Date().toISOString() },
+          });
+          return;
+        }
+
+        if (!account) {
+          res.status(404).json({
+            success: false,
+            message: 'Account not found',
+            error: { code: 'NOT_FOUND' },
+            meta: { timestamp: new Date().toISOString() },
+          });
+          return;
+        }
+
+        try {
+          // Fetch conversation detail from provider
+          const rawConversation = await getConversationDetail({
+            credential: account.credential,
+            provider_id: account.provider_id,
+            conversationId,
+          });
+
+          const normalizedData = normalizeChatHistory(
+            account.provider_id,
+            rawConversation,
+          );
+
+          res.status(200).json({
+            success: true,
+            message: 'Conversation details retrieved successfully',
+            data: normalizedData,
+            meta: { timestamp: new Date().toISOString() },
+          });
+        } catch (providerError: any) {
+          logger.error(
+            'Error fetching conversation detail from provider',
+            providerError,
+          );
+          res.status(500).json({
+            success: false,
+            message: `Failed to fetch conversation: ${providerError.message}`,
+            error: { code: 'PROVIDER_ERROR' },
+            meta: { timestamp: new Date().toISOString() },
+          });
+        }
+      },
+    );
+  } catch (error) {
+    logger.error('Error in getChatHistoryController', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: { code: 'INTERNAL_ERROR' },
+      meta: { timestamp: new Date().toISOString() },
+    });
+  }
+};

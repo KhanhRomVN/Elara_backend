@@ -1,23 +1,16 @@
 import express from 'express';
 import { getAccountSelector } from '../../services/account-selector';
-import { sendMessageController } from '../../controllers/chat.controller';
+import {
+  sendMessageController,
+  getChatHistoryController,
+} from '../../controllers/chat.controller';
 
 import { chatCompletionStream as deepseekChat } from '../../services/chat/deepseek.service';
 import { chatCompletionStream as claudeChat } from '../../services/chat/claude.service';
-import { chatCompletionStream as mistralChat } from '../../services/chat/mistral.service';
-// import { sendMessage as kimiChat } from '../../services/chat/kimi.service';
-import { sendMessage as qwenChat } from '../../services/chat/qwen.service';
-import { chatCompletionStream as perplexityChat } from '../../services/chat/perplexity.service';
-import { sendMessage as cohereChat } from '../../services/chat/cohere.service';
-import { chatCompletionStream as groqChat } from '../../services/chat/groq.service';
-import { chatCompletionStream as antigravityChat } from '../../services/chat/antigravity.service';
-import { chatCompletionStream as huggingChatChat } from '../../services/chat/hugging-chat.service';
-import { chatCompletionStream as lmArenaChatCompletionStream } from '../../services/chat/lmarena.service';
-import { chatCompletionStream as stepFunChat } from '../../services/chat/stepfun.service';
-import * as gemini from '../../services/chat/gemini.service';
 
 const router = express.Router();
 
+router.get('/history/:accountId/:conversationId', getChatHistoryController);
 router.post('/accounts/:accountId/messages', sendMessageController);
 
 router.post('/completions', async (req, res) => {
@@ -231,103 +224,6 @@ router.post('/completions', async (req, res) => {
         account.userAgent,
         callbacks,
       );
-    } else if (account.provider === 'Mistral') {
-      await mistralChat(
-        account.credential,
-        {
-          model,
-          messages,
-          chatId: conversation_id,
-        },
-        {
-          onContent: callbacks.onContent,
-          onMetadata: callbacks.onMetadata,
-          onDone: callbacks.onDone,
-          onError: callbacks.onError,
-        },
-      );
-    } else if (account.provider === 'Kimi') {
-      // await kimiChat(account.credential, model, messages, callbacks.onContent);
-      throw new Error('Kimi chat is not yet fully implemented');
-      callbacks.onDone();
-    } else if (account.provider === 'Qwen') {
-      await qwenChat(account.credential, model, messages, callbacks.onContent);
-      callbacks.onDone();
-    } else if (account.provider === 'Cohere') {
-      await cohereChat(
-        account.credential,
-        model,
-        messages,
-        callbacks.onContent,
-      );
-      callbacks.onDone();
-    } else if (account.provider === 'Perplexity') {
-      // Check for Perplexity context in previous messages
-      let perplexityContext: any = {};
-      if (model.includes('perplexity') || model.includes('pplx')) {
-        const lastAssistantMessage = [...messages]
-          .reverse()
-          .find((m) => m.role === 'assistant' && (m as any).backend_uuid);
-        if (lastAssistantMessage) {
-          perplexityContext = {
-            last_backend_uuid: (lastAssistantMessage as any).backend_uuid,
-            read_write_token: (lastAssistantMessage as any).read_write_token,
-            conversation_uuid: (lastAssistantMessage as any).id,
-          };
-        }
-      }
-
-      await perplexityChat(
-        account.credential,
-        {
-          messages,
-          model,
-          temperature,
-          ...perplexityContext,
-        },
-        account.userAgent,
-        {
-          onContent: (content) => {
-            res.write(
-              `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`,
-            );
-          },
-          onMetadata: (metadata) => {
-            res.write(
-              `data: ${JSON.stringify({ choices: [{ delta: { ...metadata } }] })}\n\n`,
-            );
-          },
-          onDone: () => {
-            res.write('data: [DONE]\n\n');
-            res.end();
-          },
-          onError: (error) => {
-            console.error('Perplexity Chat Error:', error);
-            res.write(
-              `data: ${JSON.stringify({ error: { message: error.message || 'Unknown error' } })}\n\n`,
-            );
-            res.end();
-          },
-        },
-      );
-    } else if (account.provider === 'Groq') {
-      await groqChat(req, res, account);
-      return;
-    } else if (account.provider === 'Gemini') {
-      await gemini.chatCompletionStream(req, res, account);
-      return;
-    } else if (account.provider === 'Antigravity') {
-      await antigravityChat(req, res, account);
-      return;
-    } else if (account.provider === 'HuggingChat') {
-      await huggingChatChat(req, res, account);
-      return;
-    } else if (account.provider === 'LMArena') {
-      await lmArenaChatCompletionStream(req, res, account);
-      return;
-    } else if (account.provider === 'StepFun') {
-      await stepFunChat(req, res, account);
-      return;
     } else {
       res.write(`data: {"error": "Provider not supported"}\n\n`);
       res.end();

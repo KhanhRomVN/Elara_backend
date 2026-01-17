@@ -163,6 +163,113 @@ export const importAccounts = async (
   }
 };
 
+export const addAccount = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const account: Account = req.body;
+
+    if (!account || typeof account !== 'object' || Array.isArray(account)) {
+      res.status(400).json({
+        success: false,
+        message: 'Request body must be a single account object',
+        error: {
+          code: 'INVALID_INPUT',
+          details: { expected: 'object', received: typeof req.body },
+        },
+        meta: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    if (!account.provider_id || !account.email || !account.credential) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required fields: provider_id, email, credential',
+        error: { code: 'INVALID_INPUT' },
+        meta: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const db = getDb();
+
+    // Check for existing account
+    db.get(
+      'SELECT * FROM accounts WHERE (email = ? AND provider_id = ?) OR id = ?',
+      [account.email, account.provider_id, account.id],
+      (err: any, row: any) => {
+        if (err) {
+          logger.error('Error checking for existing account', err);
+          res.status(500).json({
+            success: false,
+            message: 'Database error',
+            error: { code: 'DATABASE_ERROR' },
+            meta: { timestamp: new Date().toISOString() },
+          });
+          return;
+        }
+
+        const id = row ? row.id : account.id || require('crypto').randomUUID();
+        const action = row ? 'Update' : 'Create';
+
+        if (row) {
+          // Account already exists - Skip
+          res.status(200).json({
+            success: false,
+            message: 'Account already exists',
+            data: {
+              id: row.id,
+              email: row.email,
+              provider_id: row.provider_id,
+              action: 'skipped',
+            },
+            meta: { timestamp: new Date().toISOString() },
+          });
+          return;
+        } else {
+          // Create new
+          db.run(
+            'INSERT INTO accounts (id, provider_id, email, credential) VALUES (?, ?, ?, ?)',
+            [id, account.provider_id, account.email, account.credential],
+            (insertErr: any) => {
+              if (insertErr) {
+                logger.error('Error inserting account', insertErr);
+                res.status(500).json({
+                  success: false,
+                  message: 'Failed to create account',
+                  error: { code: 'DATABASE_ERROR' },
+                });
+                return;
+              }
+              res.status(201).json({
+                success: true,
+                message: 'Account created successfully',
+                data: {
+                  id,
+                  email: account.email,
+                  provider_id: account.provider_id,
+                  action: 'created',
+                },
+                meta: { timestamp: new Date().toISOString() },
+              });
+            },
+          );
+        }
+      },
+    );
+  } catch (error) {
+    logger.error('Error in addAccount', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: { code: 'INTERNAL_ERROR' },
+      meta: { timestamp: new Date().toISOString() },
+    });
+  }
+};
+
 export const getAccounts = async (
   req: Request,
   res: Response,

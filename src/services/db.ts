@@ -53,41 +53,8 @@ const createTables = () => {
       logger.error('Error creating providers table', err);
     } else {
       logger.info('Providers table initialized');
-      seedProviders();
     }
   });
-};
-
-const seedProviders = () => {
-  try {
-    const providersPath = path.resolve(__dirname, '../config/providers.json');
-    // Using simple require/fs to read JSON.
-    // Since we are in TS, we can just require it if we want, but let's use fs to be safe with path resolution at runtime.
-    const fs = require('fs');
-    if (fs.existsSync(providersPath)) {
-      const data = fs.readFileSync(providersPath, 'utf-8');
-      const providers = JSON.parse(data);
-
-      const stmt = db.prepare(
-        'INSERT OR IGNORE INTO providers (id, name) VALUES (?, ?)',
-      );
-
-      db.serialize(() => {
-        for (const provider of providers) {
-          stmt.run(provider.id, provider.name, (err: Error) => {
-            if (err) {
-              logger.error(`Error seeding provider ${provider.name}`, err);
-            }
-          });
-        }
-        stmt.finalize(() => {
-          logger.info('Providers seeding completed');
-        });
-      });
-    }
-  } catch (error) {
-    logger.error('Error seeding providers', error);
-  }
 };
 
 export const getDb = (): sqlite3.Database => {
