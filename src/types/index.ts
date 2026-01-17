@@ -15,16 +15,7 @@ export interface ChatRequest {
   model: string;
   messages: Message[];
   stream?: boolean;
-  thinking?: boolean;
-  search?: boolean;
-  ref_file_ids?: string[];
   conversation_id?: string;
-  parent_message_id?: string;
-  temperature?: number;
-  max_completion_tokens?: number;
-  reasoning_effort?: 'none' | 'low' | 'medium' | 'high';
-  response_format?: { type: string };
-  tools?: any[];
 }
 
 export interface StreamResponse {

@@ -55,22 +55,6 @@ router.post('/completions', async (req, res) => {
     if (!targetProvider) {
       if (model.includes('claude')) targetProvider = 'Claude';
       else if (model.includes('deepseek')) targetProvider = 'DeepSeek';
-      else if (model.includes('mistral')) targetProvider = 'Mistral';
-      else if (model.includes('moonshot')) targetProvider = 'Kimi';
-      else if (model.includes('qwen')) targetProvider = 'Qwen';
-      else if (model.includes('command')) targetProvider = 'Cohere';
-      else if (model.includes('perplexity') || model.includes('pplx'))
-        targetProvider = 'Perplexity';
-      else if (model.startsWith('gemini') && !model.includes('antigravity'))
-        targetProvider = 'Gemini';
-      else if (
-        model.includes('llama') ||
-        model.includes('mixtral') ||
-        model.includes('gemma') ||
-        model.includes('groq')
-      )
-        targetProvider = 'Groq';
-      // Antigravity models usually prefixed or unique? Assuming 'Antigravity' if explicit
     }
 
     const targetEmail = emailQuery;
@@ -147,22 +131,10 @@ router.post('/completions', async (req, res) => {
         );
       },
       onDone: () => {
-        // const duration = Date.now() - startTime;
-        // updateAccountStats(account!.id, {
-        //   tokens: requestTokens,
-        //   duration,
-        //   success: true,
-        // });
         res.write('data: [DONE]\n\n');
         res.end();
       },
       onError: (err: Error) => {
-        console.error('Stream Error:', err);
-        // updateAccountStats(account!.id, {
-        //   tokens: requestTokens,
-        //   duration: Date.now() - startTime,
-        //   success: false,
-        // });
         res.write(
           `data: ${JSON.stringify({ error: { message: err.message } })}\n\n`,
         );
@@ -187,23 +159,6 @@ router.post('/completions', async (req, res) => {
         {
           ...callbacks,
           onRaw: (data) => {
-            // Pass through raw data (events) if needed, format: `data: ...`
-            // The deepseek implementation might expect to control the writing or return callbacks
-            // Here we are reusing the callbacks pattern.
-            // If deepseekChat calls onRaw, we write it locally?
-            // Actually deepseek implementation in this codebase seems to write its own logic or use these callbacks.
-            // Checking original index.ts: it had `onRaw`, `onSessionCreated` etc.
-
-            // We need to support `onSessionCreated` which was sending `event: session_created ...`?
-            // Original:
-            /*
-                onRaw: (data) => {
-                   res.write(data);
-                 },
-                 onSessionCreated: (sessionId) => {
-                   res.write(`event: session_created\ndata: ${sessionId}\n\n`);
-                 },
-               */
             res.write(`data: ${data}\n\n`);
           },
           onSessionCreated: (sessionId) => {

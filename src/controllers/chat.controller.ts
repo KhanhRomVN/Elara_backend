@@ -176,16 +176,7 @@ export const sendMessageController = async (
 ): Promise<void> => {
   try {
     const { accountId } = req.params;
-    const {
-      model,
-      messages,
-      conversationId,
-      parentMessageId,
-      thinking,
-      search,
-      refFileIds,
-      stream,
-    } = req.body;
+    const { model, messages, conversationId, stream } = req.body;
 
     // Get account from database
     const db = getDb();
@@ -223,10 +214,6 @@ export const sendMessageController = async (
             model,
             messages,
             conversationId,
-            parentMessageId,
-            thinking,
-            search,
-            refFileIds,
             userAgent: req.headers['user-agent'],
             onContent: (content) => {
               if (stream !== false) {

@@ -29,10 +29,6 @@ export interface SendMessageOptions {
   model: string;
   messages: any[];
   conversationId?: string;
-  parentMessageId?: string;
-  thinking?: boolean;
-  search?: boolean;
-  refFileIds?: string[];
   userAgent?: string;
   onContent: (chunk: string) => void;
   onMetadata?: (meta: any) => void;
@@ -1117,10 +1113,6 @@ const sendMessageDeepSeek = async (
     model,
     messages,
     conversationId,
-    parentMessageId,
-    thinking,
-    search,
-    refFileIds,
     userAgent,
     onContent,
     onMetadata,
@@ -1134,11 +1126,7 @@ const sendMessageDeepSeek = async (
       model,
       messages,
       stream: true,
-      thinking,
-      search,
       conversation_id: conversationId,
-      parent_message_id: parentMessageId,
-      ref_file_ids: refFileIds,
     },
     userAgent,
     {
