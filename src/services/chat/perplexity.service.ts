@@ -35,7 +35,8 @@ export async function chatCompletionStream(
       Cookie: `__Secure-pplx-user-session=${token}`,
       'Content-Type': 'application/json',
       'User-Agent':
-        userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        userAgent ||
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       Origin: 'https://www.perplexity.ai',
       Referer: 'https://www.perplexity.ai/',
     },
@@ -63,7 +64,9 @@ export async function chatCompletionStream(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[Perplexity] API Error:', response.status, errorText);
-      callbacks.onError(new Error(`Perplexity API returned ${response.status}`));
+      callbacks.onError(
+        new Error(`Perplexity API returned ${response.status}`),
+      );
       return;
     }
 
@@ -93,7 +96,8 @@ export async function chatCompletionStream(
               callbacks.onMetadata({
                 backend_uuid,
                 read_write_token: rw_token,
-                id: conv_uuid,
+                conversation_id: conv_uuid,
+                conversation_title: 'New Chat',
               });
             }
             callbacks.onDone();

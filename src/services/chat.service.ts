@@ -393,7 +393,10 @@ export const sendMessageQwen = async (
     if (!conversationId) {
       conversationId = await createQwenChat(credential, userAgent);
       if (onMetadata) {
-        onMetadata({ conversationId, title: 'New Chat' }); // Qwen doesn't return title immediately, use default
+        onMetadata({
+          conversation_id: conversationId,
+          conversation_title: 'New Chat',
+        });
       }
     }
 
@@ -639,7 +642,10 @@ export const sendMessageHuggingChat = async (
         userAgent,
       );
       if (onMetadata) {
-        onMetadata({ conversationId, title: 'New Chat' });
+        onMetadata({
+          conversation_id: conversationId,
+          conversation_title: 'New Chat',
+        });
       }
     }
 
@@ -962,7 +968,10 @@ export const sendMessageMistral = async (
     if (!conversationId) {
       conversationId = await createMistralChat(credential, content, userAgent);
       if (onMetadata) {
-        onMetadata({ conversationId, title: 'New Chat' });
+        onMetadata({
+          conversation_id: conversationId,
+          conversation_title: 'New Chat',
+        });
       }
 
       await streamMistral(
